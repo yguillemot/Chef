@@ -1,0 +1,51 @@
+
+#
+# Données de programmation du métronome :
+#
+# Un caractère '#' et tout ce qui le suit sur une même ligne est ignoré
+#
+# Les lignes blanches sont ignorées
+#
+# tempo 4 120 15
+#   ==> Mesure à 4 temps, 120 battements par minute, répéter 15 fois
+#
+# fermata 3 100 3 2
+#   ==> Une mesure à 3 temps, 100 battements par minute, avec un point d'orgue
+#       de durée 2 temps sur le 3ème temps.
+#       (la durée des temps est celle utilisée précédemment)
+#
+# stop 3 100 3 2
+#   ==> Identique à "fermata 3 100 3 2", mais arrêt du métronome après le
+#       point d'orgue
+#
+# stop
+#   ==> Arrêt immédiat du métronome
+#       (la durée des temps est celle utilisée précédemment)
+#
+# message Un texte quelconque
+#   ==> Affichage de "Un texte quelconque"
+#
+
+
+tempo 4 100 20
+message Passage A               # Affichage de "Passage A"
+tempo 3 100 1
+message                         # Suppression de l'affichage
+tempo 3 100 15
+fermata 3 100 3 2
+tempo 4 120 30
+stop 4 120 4 2
+
+
+
+#
+# Evolutions future :
+#
+# tempo 2 80 0
+# rampe 27    # Variation de tempo de 100 à 120 sur les 10 mesures suivantes
+# tempo 2 120 5
+#
+#   ==> mesure à 2 temps, départ de 80 BPM et acceleration jusqu'à 120 BPM
+#       en 27 mesures
+#   ==> Puis 5 mesures à 120 BPM
+#

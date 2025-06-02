@@ -1,6 +1,8 @@
 Etude d'une application de métronome visuel imitant (vaguement) un chef
 d'orchestre qui bat la mesure.
 
+exemple.metro : Exemple de description d'une séquence de battue
+
 Essai préliminaire d'une trajectoire (curve.txt) avec GnuPlot
 -------------------------------------------------------------
 trace.gp

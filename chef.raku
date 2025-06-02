@@ -32,17 +32,18 @@ constant D = 50;
 constant Vmin = 0.02;
 constant Vmax = 0.20;
 
-# Tempo (beat/mn
-constant $tempo = 120;
+# Tempo (beat/mn)
+constant $tempo = 170;
 
 # Timer period (ms)
-constant T = 50;
+constant T = 10;
 
 # Number of points in a trajectory
 constant N = 500;
 # constant N = (10 * 60 / ($tempo / T)).Int;
 
-
+constant ND = 7;    # Nombre de disques pour simuler le déplacement de la baguette
+                    # (avec 1 seul disque, allure "sautillante" et "hachée")
 
 
 
@@ -223,7 +224,7 @@ class Trajectory
 class Sequencer is QtObject
 {
     has QGraphicsScene $.scene;
-    has Baguette $.baguette;
+    has Baguette @.baguette;
     has Trajectory @.beat[4];
 
     has $.x is rw = W / 2 - D / 2;
@@ -238,6 +239,8 @@ class Sequencer is QtObject
     has Real $!Ts = $!Tb / N;       # Durée d'un échantillon de déplacement
     has Real $!t0;
     has Bool $!running = False;
+
+    has Int $!count;
 
 
     submethod TWEAK
@@ -266,7 +269,9 @@ class Sequencer is QtObject
         $!b = ($t / $!Tb).Int % 4;
         $!i = ($t / $!Ts).Int % N;
 
-        $.baguette.move: @.beat[$!b].x[$!i], @.beat[$!b].y[$!i];
+        $!count++;
+        @.baguette[$!count % @!baguette.elems].move:
+                                    @.beat[$!b].x[$!i], @.beat[$!b].y[$!i];
 #         $!i++;
 #         if $!i >= N {
 #             $!i = 0;
@@ -285,7 +290,10 @@ class Sequencer is QtObject
     {
         $!b = 0;
         $!i = 0;
-        $.baguette.move: @.beat[$!b].x[$!i], @.beat[$!b].y[$!i];
+        for @.baguette -> $bag {
+            $bag.move: @.beat[$!b].x[$!i], @.beat[$!b].y[$!i];
+        }
+        $!count = 0;
     }
 
     method start()
@@ -318,19 +326,23 @@ my QBrush $brush = QBrush.new: $bgc, Qt::SolidPattern;
 # Create some objects moving on the scene
 my @mobjs;    # Moving objects list
 
-my $baguette = Baguette.new:
-                    scene => $scene,
-                    gitem => QGraphicsEllipseItem.new(0, 0, D, D),
-                    pen => $pen,
-                    brush => $brush;
-
-
 # Show the scene (needs a QGraphicsView)
 my QGraphicsView $view = QGraphicsView.new: $scene;
 $view.setMinimumSize: W + 30, H + 30;   # Used scene always visible
 $view.show;
 
-my Sequencer $sequencer .= new: scene => $scene, baguette => $baguette;
+my Sequencer $sequencer .= new: scene => $scene;
+
+# Create ND disks to simulate the moving baguette
+for 1..ND {
+    my $baguette = Baguette.new:
+                   scene => $scene,
+                   gitem => QGraphicsEllipseItem.new(0, 0, D, D),
+                   pen => $pen,
+                   brush => $brush;
+    $sequencer.baguette.push: $baguette;
+}
+
 $sequencer.init;
 
 # Create a timer, set its period and connect it to each moving object

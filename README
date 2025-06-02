@@ -6,4 +6,5 @@ exemple.metro : Exemple de description d'une séquence de battue
 traj : Répertoire contenant des essais de trajectoires de battue
 
 chef.raku : Code de base de l'application graphique
+            Effectue une battue à 4 temps avec des trajectoires linéaires
 

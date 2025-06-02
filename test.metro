@@ -1,0 +1,18 @@
+
+#
+# Essai de programmation du métronome :
+#
+
+
+tempo 4 100 10
+message Passage A               # Affichage de "Passage A"
+tempo 4 80 1
+message                         # Suppression de l'affichage
+rampe 4 140 15
+tempo 3 100 5
+tempo 4 60 5
+stop
+
+
+
+

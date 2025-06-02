@@ -6,5 +6,23 @@ exemple.metro : Exemple de description d'une séquence de battue
 traj : Répertoire contenant des essais de trajectoires de battue
 
 chef.raku : Code de base de l'application graphique
-            Effectue une battue à 4 temps avec des trajectoires linéaires
+            Effectue une battue à partir d'une description bas-niveau donnée
+            dans le fichier data.txt
 
+base.metro : Exemple et description d'un fichier "bas-niveau"
+
+test.metro : Exemple et description d'un fichier "haut-niveau"
+
+metro_compiler.raku : Compilation d'un fichier bas-niveau --> haut-niveau
+
+Utilisation :
+
+    raku metro_compiler.raku
+
+        - Lit le fichier test.metro
+        - Ecrit le fichier data.txt
+
+    raku chef.raku
+
+        - Lit le fichier data.txt
+        - Affiche la battue

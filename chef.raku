@@ -8,14 +8,18 @@ use Qt::QtWidgets::QColor;
 use Qt::QtWidgets::QFont;
 use Qt::QtWidgets::QGraphicsEllipseItem;
 use Qt::QtWidgets::QGraphicsItem;
-use Qt::QtWidgets::QGraphicsRectItem;
 use Qt::QtWidgets::QGraphicsScene;
 use Qt::QtWidgets::QGraphicsSimpleTextItem;
 use Qt::QtWidgets::QGraphicsView;
+use Qt::QtWidgets::QHBoxLayout;
 use Qt::QtWidgets::QPen;
+use Qt::QtWidgets::QPushButton;
 use Qt::QtWidgets::QRectF;
 use Qt::QtWidgets::QTimer;
+use Qt::QtWidgets::QWidget;
 use Qt::QtWidgets::Qt;
+
+
 
 
 # Size of the scene
@@ -57,9 +61,94 @@ constant ND = 7;    # Nombre de disques pour simuler le déplacement de la bague
 # $b = (($nbm * $it * T / $tempo) / $nbm).Int % $nbm;
 
 
+class Action
+{
+    has Str $.type;
+    has Str $.geste;
+    has Str $.affichage;
+    has Int $.duree;
+    has Str $.message;
+    has Duration $.startTime;  # Time related to tne end of the last Pause
+    has Duration $.endTime;    # Time related to the end of the last Pause
 
+    method say
+    {
+        print $.type;
+        print " $.geste" with $!geste;
+        print " '$.affichage'" with $!affichage;
+        print " $.duree" with $!duree;
+        print " \"$.message\"" with $!message;
+        print "   sT = $.startTime" with $!startTime;
+        print "   eT = $.endTime" with $!endTime;
+        say "";
+    }
+}
 
+class Program
+{
+    has Action @.actions;
 
+    method input(Str $file)
+    {
+        my Str $data = slurp $file;
+
+        # Suppression des commentaires
+        $data ~~ s:g /'#'\N*\n/\n/;
+
+        # Suppression des lignes blanches
+        $data ~~ s:g /^^\s*\n//;
+
+        # say "=======";
+        # say $data;
+        # say "=======";
+
+        my Duration $time .= new: 0;
+        for $data.lines>>.trim -> $l {
+            given $l {
+                when /^ 'I'/ {
+                    # say "I $l";
+                    @!actions.push(Action.new: type => 'I');
+                    $time .= new: 0;
+                }
+                when /^ 'P'/ {
+                    # say "P $l";
+                    @!actions.push(Action.new: type => 'P');
+                    $time .= new: 0;
+                }
+                when /^ 'B' \s+ (.) \s+ (.) \s+ (\d+) / {
+                    # say "B $0 $1 : $l";
+                    my $previousTime = $time;
+                    $time += 60 / $2.Int;
+                    my $aff = $1.Str ~~ 'X' ?? "" !! $1.Str;
+                    @!actions.push(Action.new: type => 'B',
+                                               geste => $0.Str,
+                                               affichage => $aff,
+                                               duree => $2.Int,
+                                               startTime => $previousTime,
+                                               endTime => $time);
+                }
+                when /^ 'S'/ {
+                    # say "S $l";
+                    @!actions.push(Action.new: type => 'S');
+                    $time .= new: 0;
+                }
+                when /^ 'M' \s+ (\S.*)/ {
+                    @!actions.push(Action.new: type => 'M',
+                                               message => $0.Str.trim);
+                }
+                when /^ 'M' / {
+                     @!actions.push(Action.new: type => 'M',
+                                               message => "");
+                }
+            }
+        }
+
+        # say "+" x 7;
+        # @!actions>>.say;
+        # say "+" x 7;
+        # exit;
+    }
+}
 
 
 
@@ -122,6 +211,9 @@ class Baguette is QtObject
     method move($x, $y) is QtSlot        # Move current object after a timer period
     {
         # Set new position
+        # say "before move";
+        # say "x: ", $x;
+        # say "y: ", $y;
         $!gitem.setPos: $x, $y;
     }
 }
@@ -132,6 +224,7 @@ class Scene is QGraphicsScene
 {
     has Int ($.x1, $.x2, $.y1, $.y2);   # Limits of the useful part of the scene
     has QGraphicsSimpleTextItem $.display;
+    has QGraphicsSimpleTextItem $.texte;
 
     submethod TWEAK
     {
@@ -153,12 +246,25 @@ class Scene is QGraphicsScene
         $!display.setFont: $font;
         self.addItem: $!display;                # Add the object to the scene
         $!display.setPos: W / 2, 100;
+
+        $!texte .= new: "Des infos";
+        $font.setPointSize: 80;
+        $!texte.setFont: $font;
+        self.addItem: $!texte;                # Add the object to the scene
+        $!texte.setPos: 50, H / 2;
     }
 
     method montrer(Str $txt)
     {
         $.display.setText: $txt;
     }
+
+    method message(Str $txt)
+    {
+        # say "txt : '", $txt, "'";
+        $.texte.setText: $txt;
+    }
+
 }
 
 # Compute a linear trajectory
@@ -168,14 +274,16 @@ class Scene is QGraphicsScene
 #    $i : starting index in tables
 #    (@x, @y) : tables of points
 #    Returns the next unused index
-sub computePoints(Real $ax, Real $ay, Real $bx, Real $by, Real $ds, Int $idx, @x, @y --> Int)
+sub computePoints(Real $ax, Real $ay,
+                  Real $bx, Real $by,
+                  Real $ds, Int $idx, @x, @y --> Int)
 {
-say "ds=$ds";
+    # say "ds=$ds";
     my Int $n = (sqrt(($ax - $bx)**2 + ($ay - $by)**2) / $ds).Int;
     my Real $dx = ($bx - $ax) / $n;
     my Real $dy = ($by - $ay) / $n;
     my ($x, $y) = ($ax, $ay);
-    say "n=$n";
+    # say "n=$n";
     for 1..$n {
         @x.push: $x;
         @y.push: $y;
@@ -187,6 +295,7 @@ say "ds=$ds";
 
 class Trajectory
 {
+    has Str $.type;
     has Real ($.ax, $.ay);    # Starting point
     has Real ($.bx, $.by);    # First step
     has Real ($.cx, $.cy);    # Summit
@@ -196,44 +305,58 @@ class Trajectory
     submethod TWEAK
     {
 
-    say "A : ($!ax, $!ay)   B : ($!bx, $!by)   C : $!cx, $!cy)";
-    say ($!ax - $!bx)**2;
-        # Compute perimeter
-        my $p = sqrt(($!ax - $!bx)**2 + ($!ay - $!by)**2)
-                + sqrt(($!bx - $!cx)**2 + ($!by - $!cy)**2)
-                + sqrt(($!cx - $!ax)**2 + ($!cy - $!ay)**2);
+        if $!type ~~ "TRIANGLE" {
+            # say "A : ($!ax, $!ay)   B : ($!bx, $!by)   C : $!cx, $!cy)";
+            # say ($!ax - $!bx)**2;
 
-        my $ds = $p / N;
-        say "P = $p   ds = $ds";
+            # Compute perimeter
+            my $p = sqrt(($!ax - $!bx)**2 + ($!ay - $!by)**2)
+                    + sqrt(($!bx - $!cx)**2 + ($!by - $!cy)**2)
+                    + sqrt(($!cx - $!ax)**2 + ($!cy - $!ay)**2);
 
-        # Compute all the points
-        my $nexti = computePoints($!ax, $!ay, $!bx, $!by, $ds, 0, @!x, @!y);
-        $nexti = computePoints($!bx, $!by, $!cx, $!cy, $ds, $nexti, @!x, @!y);
-        $nexti = computePoints($!cx, $!cy, $!ax, $!ay, $ds, $nexti, @!x, @!y);
+            my $ds = $p / N;
+            # say "P = $p   ds = $ds";
 
-        # Sometimes, there are less than N points in @.x and @.y
-        while $nexti < N {
-            my Int $i = $nexti - 1;
-            (@!x[$nexti], @!y[$nexti]) = (@!x[$i], @!y[$i]);
-            $nexti++;
+            # Compute all the points
+            my $nexti = computePoints($!ax, $!ay, $!bx, $!by, $ds, 0, @!x, @!y);
+            $nexti = computePoints($!bx, $!by, $!cx, $!cy, $ds, $nexti, @!x, @!y);
+            $nexti = computePoints($!cx, $!cy, $!ax, $!ay, $ds, $nexti, @!x, @!y);
+
+            # Sometimes, there are less than N points in @.x and @.y
+            while $nexti < N {
+                my Int $i = $nexti - 1;
+                (@!x[$nexti], @!y[$nexti]) = (@!x[$i], @!y[$i]);
+                $nexti++;
+            }
+        } elsif $!type ~~ "POINT" {
+            for (0...^N) -> $i {
+                @!x.push: $!ax;
+                @!y.push: $!ay;
+            }
+        } else {
+            die "Unknown trajectory type : $!type";
         }
     }
-
 }
+
 
 class Sequencer is QtObject
 {
     has QGraphicsScene $.scene;
     has Baguette @.baguette;
-    has Trajectory @.beat[4];
+    has Trajectory @.beat[5];
+    has $.program;
+
+    has $!actions;
 
     has $.x is rw = W / 2 - D / 2;
     has $.y is rw = H - D;
 
+    has Bool $!newBeat;
     has Int $!b;
     has Int $!i;
 
-    has $!now;
+#     has $!now;
 
     has Real $!Tb = 60 / $tempo;    # Durée d'un temps
     has Real $!Ts = $!Tb / N;       # Durée d'un échantillon de déplacement
@@ -241,54 +364,102 @@ class Sequencer is QtObject
     has Bool $!running = False;
 
     has Int $!count;
+    has Int $ai;           # Actions index
+    has Int $aimax = 0;    # Max actions index
 
 
     submethod TWEAK
     {
-        @!beat[0] .= new:   ax => W / 2,      ay => H - D,
+        @!beat[0] .= new:   type => "POINT",
+                            ax => W / 2,      ay => H / 2;
+
+        @!beat[1] .= new:   type => "TRIANGLE",
+                            ax => W / 2,      ay => H - D,
                             bx => W - D,      by => H / 2 - D / 2,
                             cx => W / 2,      cy => 0;
 
-        @!beat[1] .= new:   ax => W / 2,      ay => H - D,
+        @!beat[2] .= new:   type => "TRIANGLE",
+                            ax => W / 2,      ay => H - D,
                             bx => D,          by => 3 * H / 4 - D / 2,
                             cx => W / 2,      cy => H / 2 - D / 2;
 
-        @!beat[2] .= new:   ax => W / 2,      ay => H - D,
+        @!beat[3] .= new:   type => "TRIANGLE",
+                            ax => W / 2,      ay => H - D,
                             bx => W - D,      by => 3 * H / 4 - D / 2,
                             cx => W / 2,      cy => H / 2 - D / 2;
 
-        @!beat[3] = @!beat[1];
+        @!beat[4] = @!beat[2];
 
-        $!now = DateTime.now.Instant;
+#         $!now = DateTime.now.Instant;
+
+        $!actions = $!program.actions;
     }
 
     method work is QtSlot {
 
-        return if !$!running;
-        my $t = DateTime.now.Instant - $!t0;
-        $!b = ($t / $!Tb).Int % 4;
-        $!i = ($t / $!Ts).Int % N;
+        # say "work ai=$!ai aimax=$!aimax  running=$!running";
 
-        $!count++;
-        @.baguette[$!count % @!baguette.elems].move:
-                                    @.beat[$!b].x[$!i], @.beat[$!b].y[$!i];
-#         $!i++;
-#         if $!i >= N {
-#             $!i = 0;
-#             $!b++;
-#             if $!b > 3 {
-#                 $!b = 0;
-#                 my $n = DateTime.now.Instant;
-#                 say $n - $!now;
-#                 $!now = $n;
-#             }
-#         }
-        $.scene.montrer: "{(4,1,2,3)[$!b]}";
+        $!running = False if $!ai >= $!aimax;
+        return if !$!running;
+
+        given $!actions[$ai].type {
+            when 'B' {
+
+                if $!newBeat {
+                    $!newBeat = False;
+                    # $!Tb = 60 / @!actions[$ai].duree;   # Durée d'un temps
+
+                    # Durée d'un échantillon de déplacement
+                    $!Ts = 60 / $!actions[$ai].duree / N;
+                }
+
+                my $t = now - $!t0;
+
+                if $t > $!actions[$!ai].endTime {
+                    $!ai++;
+                    $!newBeat = True;
+                    # say "NEWBEAT";
+                    return;  # Solution de facilité, mais on perd un tic du timer
+                }
+
+                # say "AI = $!ai";
+                $!b = $!actions[$!ai].geste.Int;
+                # say "b = ", $!b;
+                $!i = (($t -  $!actions[$!ai].startTime) / $!Ts).Int;
+                # say "i = ", $!i;
+
+                $!count++;
+                @.baguette[$!count % @!baguette.elems].move:
+                                            @.beat[$!b].x[$!i], @.beat[$!b].y[$!i];
+
+                $.scene.montrer: $!actions[$ai].affichage;
+            }
+            when 'M' {
+                # say "M msg ='", $!actions[$ai].message, "'";
+                $.scene.message: $!actions[$ai].message;
+                $!ai++;
+            }
+            when 'P' {
+                # say "Action P",
+                $!ai++;           }
+            when 'S' {
+                # say "Action S",
+                $!ai++;           }
+            when 'I' {
+                # say "Action I",
+                $!ai++;           }
+            default {
+                die "Unknown action type {$!actions[$ai].type} !!!";
+            }
+        }
+
     }
 
     method init()
     {
-        $!b = 0;
+        $!ai = 0;
+        $!aimax = $!actions.elems;
+        $!b = 1;
         $!i = 0;
         for @.baguette -> $bag {
             $bag.move: @.beat[$!b].x[$!i], @.beat[$!b].y[$!i];
@@ -296,10 +467,13 @@ class Sequencer is QtObject
         $!count = 0;
     }
 
-    method start()
+    method start() is QtSlot
     {
-        $!t0 = DateTime.now.Instant;
+        # say "started";
+        $!ai = 0;
+        $!newBeat = True;
         $!running = True;
+        $!t0 = now;
     }
 
 }
@@ -307,7 +481,8 @@ class Sequencer is QtObject
 
 ####################################################################
 
-
+my $program = Program.new;
+$program.input: "data.txt";
 
 # Create QApplication before creating any other Qt object
 my $qApp = QApplication.new("Moving objects example", @*ARGS);
@@ -322,16 +497,31 @@ $pen.setWidth: 1;
 my QColor $bgc = QColor.new: Qt::red;
 my QBrush $brush = QBrush.new: $bgc, Qt::SolidPattern;
 
-
 # Create some objects moving on the scene
 my @mobjs;    # Moving objects list
 
 # Show the scene (needs a QGraphicsView)
 my QGraphicsView $view = QGraphicsView.new: $scene;
 $view.setMinimumSize: W + 30, H + 30;   # Used scene always visible
-$view.show;
 
-my Sequencer $sequencer .= new: scene => $scene;
+#=================
+my $window = QWidget.new;    # main window
+
+my $startButton = QPushButton.new('Start');
+
+# Layout
+
+my $layout = QHBoxLayout.new;
+$layout.addWidget($view);
+$layout.addWidget($startButton);
+
+$window.setLayout($layout);
+$window.show;
+#=================
+
+# $view.show;
+
+my Sequencer $sequencer .= new: scene => $scene, program => $program;
 
 # Create ND disks to simulate the moving baguette
 for 1..ND {
@@ -349,12 +539,13 @@ $sequencer.init;
 my $timer = QTimer.new;
 $timer.setInterval: T;
 connect $timer, "timeout", $sequencer, "work";
+connect $startButton, "pressed", $sequencer, "start";
 
 # Start the timer
 $timer.start;
 
 # Start the sequencer
-$sequencer.start;
+# $sequencer.start;
 
 # Run the graphical application
 $qApp.exec;

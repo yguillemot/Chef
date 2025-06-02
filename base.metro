@@ -1,0 +1,83 @@
+
+#
+# Données de programmation du métronome :
+#
+# Un caractère '#' et tout ce qui le suit sur une même ligne est ignoré
+#
+# Les lignes blanches sont ignorées
+#
+# B 1 3 120
+#   ==> Battement : 1 battement avec mouvement de type 1, affichage "3",
+#       vitesse 120 BPM
+#       (Types de mouvements possibles : 0, 1, 2, 3 et 4.
+#        Le type 0 est un point d'orgue.)
+#        Le code d'affichage 'X' correspond à un blanc (rien n'est affiché)
+#
+# S
+#   ==> Stop : Arrêt immédiat du métronome
+#       (la durée des temps est celle utilisée précédemment)
+#
+# M Un texte quelconque
+#   ==> Message : Affichage de "Un texte quelconque"
+#
+
+I       # Initialisation
+P       # Pause (attente opérateur)
+
+# Mouvement préliminaire
+M 4/4 - 100 BPM             # Affichage de "4/4 - 100 BPM"
+B 1 X 100     # Avant temps 1
+
+# 3 mesures à 4 temps, 100 BPM
+B 2  1 100      # Temps 1
+B 3  2 100      # Temps 2
+B 4  3 100      # Temps 3
+B 1  4 100      # Temps 4
+
+B 2  1 100      # Temps 1
+B 3  2 100      # Temps 2
+B 4  3 100      # Temps 3
+B 1  4 100      # Temps 4
+
+B 2  1 100      # Temps 1
+B 3  2 100      # Temps 2
+B 4  3 100      # Temps 3
+B 1  4 100      # Temps 4
+
+M 3/4 - 80 BPM               # Affichage de "3/4 - 80 BPM"
+
+# 2 mesures à 3 temps, 80 BPM
+B 2  1 80      # Temps 1
+B 3  2 80      # Temps 2
+B 1  3 80      # Temps 3
+
+B 2  1 80      # Temps 1
+B 3  2 80      # Temps 2
+B 1  3 80      # Temps 3
+
+# 5 mesures à 2 temps, 120 BPM
+M 2/4 - 120 BPM               # Affichage de "2/4 - 120 BPM"
+B 2  1 120      # Temps 1
+B 1  2 120      # Temps 2
+
+B 2  1 120      # Temps 1
+B 1  2 120      # Temps 2
+
+B 2  1 120      # Temps 1
+B 1  2 120      # Temps 2
+
+B 2  1 120      # Temps 1
+B 1  2 120      # Temps 2
+
+B 2  1 120      # Temps 1
+B 1  2 120      # Temps 2
+M                         # Suppression de l'affichage
+# Point d'orgue, durée 3 temps à 120 BPM
+B 0  2 120      # Temps 1
+B 0  X 120      # Temps 2
+B 0  X 120      # Temps 3
+
+# Arret
+S
+
+

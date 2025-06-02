@@ -8,6 +8,13 @@ Essai préliminaire avec GnuPlot
 -------------------------------
 trace.gp
 
+    gnuplot trace.gp
+
+ou
+
+    gnuplot
+    > load "trace.gp"
+
 Calcul de la même trajectoire
 -----------------------------
 create_curve.raku
@@ -16,6 +23,9 @@ Le résultat
 -----------
 curve.txt
 
+    gnuplot
+    > plot "curve.txt" with lines
+
 Calcul d'une trajectoire plus simple
 ------------------------------------
 create_curve2.raku
@@ -23,3 +33,6 @@ create_curve2.raku
 Le nouveau résultat
 -------------------
 curve2.txt
+
+    gnuplot
+    > plot "curve2.txt" with lines

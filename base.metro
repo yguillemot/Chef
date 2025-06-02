@@ -20,6 +20,16 @@
 # M Un texte quelconque
 #   ==> Message : Affichage de "Un texte quelconque"
 #
+#
+# N 25
+#   ==> La mesure suivante porte le numéro 25
+#       Ce numéro est ensuite incrémenté automatiquement jusqu'à la
+#       fin ou jusqu'à une nouvelle instruction N
+#
+# T 4
+#   ==> La mesure suivante est à 4 temps
+#       Ce nombre est ensuite conservé jusqu'à la
+#       fin ou jusqu'à une nouvelle instruction T
 
 I       # Initialisation
 P       # Pause (attente opérateur)

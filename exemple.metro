@@ -6,6 +6,12 @@
 #
 # Les lignes blanches sont ignorées
 #
+# bar -1
+#   ==> Indique un numéro de mesure
+#       Une valeur négative indique une "mesure pour rien"
+#       Le numéro de mesure est ensuite incrémenté automatiquement pendant
+#       l'exécution des instructions "tempo"
+#
 # tempo 4 120 15
 #   ==> Mesure à 4 temps, 120 battements par minute, répéter 15 fois
 #
@@ -26,7 +32,7 @@
 #   ==> Affichage de "Un texte quelconque"
 #
 
-
+bar -2
 tempo 4 100 20
 message Passage A               # Affichage de "Passage A"
 tempo 3 100 1

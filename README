@@ -1,7 +1,7 @@
 Etude d'une application de métronome visuel imitant (vaguement) un chef
 d'orchestre qui bat la mesure.
 
-exemple.metro : Exemple de description d'une séquence de battue
+exemple.metro : Exemple et description d'une séquence de battue
 
 traj : Répertoire contenant des essais de trajectoires de battue
 
@@ -11,7 +11,7 @@ chef.raku : Code de base de l'application graphique
 
 base.metro : Exemple et description d'un fichier "bas-niveau"
 
-test.metro : Exemple et description d'un fichier "haut-niveau"
+test.metro : Exemple, pour test, d'un fichier "haut-niveau"
 
 metro_compiler.raku : Compilation d'un fichier bas-niveau --> haut-niveau
 

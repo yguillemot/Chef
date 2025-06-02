@@ -7,6 +7,7 @@ my Bool $starting = True;
 
 my $lastbpm;
 my $lcount = 0;
+my $oldTimeSig = 0;       # Remember previous time signature
 LINE:
 for $txt.lines -> $l {
     $lcount++;
@@ -21,6 +22,10 @@ for $txt.lines -> $l {
             my $beats = $0;
             my $bpm = $1;
             my $repeats = $2;
+            if $beats != $oldTimeSig {
+                $out ~= "T $beats\n";
+                $oldTimeSig = $beats;
+            }
             if $starting {
                 $starting = False;
                 $out ~= "B 1 X $bpm\n";
@@ -40,6 +45,10 @@ for $txt.lines -> $l {
             my $repeats = $2;
             my $deltabpm = ($newbpm - $lastbpm) / $beats / $repeats;
             my $bpm = $lastbpm;
+            if $beats != $oldTimeSig {
+                $out ~= "T $beats\n";
+                $oldTimeSig = $beats;
+            }
             if $starting {
                 $starting = False;
                 $out ~= "B 1 X $bpm\n";
@@ -50,6 +59,10 @@ for $txt.lines -> $l {
                     $bpm  += $deltabpm;
                 }
             }
+        }
+
+        when / 'bar' \s+ ('-'? \d+) $/ {
+            $out ~= "N $0\n";
         }
 
         when / 'message' \s+ (\S .+) $/ {

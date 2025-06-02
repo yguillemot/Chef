@@ -71,7 +71,8 @@ class Action
     has Str $.message;          # Any text coming with the 'M' action
     has Duration $.startTime;   # Time related to tne end of the last Pause
     has Duration $.endTime;     # Time related to the end of the last Pause
-    has Int $.bar;              # Measure number
+    has Int $.bar;              # Bar number
+    has Int $.timeSig;          # Time signature
 
     method say
     {
@@ -82,6 +83,8 @@ class Action
         print " \"$.message\"" with $!message;
         print "   sT = $.startTime" with $!startTime;
         print "   eT = $.endTime" with $!endTime;
+        print "   N = $.bar" with $!bar;
+        print "   T = $.timeSig" with $!timeSig;
         say "";
     }
 }
@@ -141,6 +144,14 @@ class Program
                 when /^ 'M' / {
                      @!actions.push(Action.new: type => 'M',
                                                message => "");
+                }
+                when /^ 'N' \s+ ('-'? \d+)/ {
+                     @!actions.push(Action.new: type => 'N',
+                                                bar => $0.Int);
+                }
+                when /^ 'T' \s+ (\d+)/ {
+                     @!actions.push(Action.new: type => 'T',
+                                                timeSig => $0.Int);
                 }
             }
         }
@@ -227,6 +238,8 @@ class Scene is QGraphicsScene
     has Int ($.x1, $.x2, $.y1, $.y2);   # Limits of the useful part of the scene
     has QGraphicsSimpleTextItem $.display;
     has QGraphicsSimpleTextItem $.texte;
+    has QGraphicsSimpleTextItem $.bar;
+    has QGraphicsSimpleTextItem $.timeSig;
 
     submethod TWEAK
     {
@@ -254,6 +267,18 @@ class Scene is QGraphicsScene
         $!texte.setFont: $font;
         self.addItem: $!texte;                # Add the object to the scene
         $!texte.setPos: 50, H / 2;
+
+        $!bar .= new: "bar number";
+        $font.setPointSize: 50;
+        $!bar.setFont: $font;
+        self.addItem: $!bar;                # Add the object to the scene
+        $!bar.setPos: 20, 50;
+
+        $!timeSig .= new: "T.S.";
+        $font.setPointSize: 50;
+        $!timeSig.setFont: $font;
+        self.addItem: $!timeSig;                # Add the object to the scene
+        $!timeSig.setPos: W - 100, 50;
     }
 
     method montrer(Str $txt)
@@ -265,6 +290,16 @@ class Scene is QGraphicsScene
     {
         # say "txt : '", $txt, "'";
         $.texte.setText: $txt;
+    }
+
+    method showBar(Int $bar)
+    {
+        $.bar.setText: ~$bar;
+    }
+
+    method showTimeSig(Int $ts)
+    {
+        $.timeSig.setText: ~$ts;
     }
 
 }
@@ -358,6 +393,8 @@ class Sequencer is QtObject
     has Int $!b;
     has Int $!i;
 
+    has Int $!bar = 0;              # Numéro de mesure
+
 #     has $!now;
 
     has Real $!Tb = 60 / $tempo;    # Durée d'un temps
@@ -367,8 +404,8 @@ class Sequencer is QtObject
     has Bool $!stopped = False;
 
     has Int $!count;
-    has Int $ai;           # Actions index
-    has Int $aimax = 0;    # Max actions index
+    has Int $!ai;                   # Actions index
+    has Int $!aimax = 0;            # Max actions index
 
 
     submethod TWEAK
@@ -405,15 +442,20 @@ class Sequencer is QtObject
         $!running = False if $!ai >= $!aimax;
         return if !$!running;
 
-        given $!actions[$ai].type {
+        given $!actions[$!ai].type {
             when 'B' {
-
                 if $!newBeat {
                     $!newBeat = False;
                     # $!Tb = 60 / @!actions[$ai].duree;   # Durée d'un temps
 
                     # Durée d'un échantillon de déplacement
-                    $!Ts = 60 / $!actions[$ai].duree / N;
+                    $!Ts = 60 / $!actions[$!ai].duree / N;
+
+
+                    # say "+++ ai=", $!ai, "  b=", $!b;
+                    # say "    bar = ", $!bar;
+                    # Update displayed bar number
+                    $.scene.showBar: $!bar++ if $!b == 1;
                 }
 
                 my $t = now - $!t0;
@@ -438,11 +480,21 @@ class Sequencer is QtObject
                 @.baguette[$!count % @!baguette.elems].move:
                                             @.beat[$!b].x[$!i], @.beat[$!b].y[$!i];
 
-                $.scene.montrer: $!actions[$ai].affichage;
+                $.scene.montrer: $!actions[$!ai].affichage;
             }
             when 'M' {
                 # say "M msg ='", $!actions[$ai].message, "'";
-                $.scene.message: $!actions[$ai].message;
+                $.scene.message: $!actions[$!ai].message;
+                $!ai++;
+            }
+            when 'T' {
+                # say "T = ", $!actions[$ai].timeSig, "'";
+                $.scene.showTimeSig: $!actions[$!ai].timeSig;
+                $!ai++;
+            }
+            when 'N' {
+                # say "N bar = ",  $!actions[$ai].bar;
+                $!bar = $!actions[$!ai].bar;
                 $!ai++;
             }
             when 'P' {
@@ -458,7 +510,7 @@ class Sequencer is QtObject
                 $!ai++;
             }
             default {
-                die "Unknown action type {$!actions[$ai].type} !!!";
+                die "Unknown action type {$!actions[$!ai].type} !!!";
             }
         }
 
@@ -476,6 +528,7 @@ class Sequencer is QtObject
         $!count = 0;
         $!newBeat = True;
         $!stopped = False;
+        $!bar = 0;
     }
 
     method start() is QtSlot

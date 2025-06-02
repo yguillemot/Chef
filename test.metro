@@ -3,7 +3,7 @@
 # Essai de programmation du métronome :
 #
 
-
+bar -1
 tempo 4 100 10
 message Passage A               # Affichage de "Passage A"
 tempo 4 80 1

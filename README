@@ -12,3 +12,11 @@ create_curve.raku
 Le résultat
 -----------
 curve.txt
+
+Calcul d'une trajectoire plus simple
+------------------------------------
+create_curve2.raku
+
+Le nouveau résultat
+-------------------
+curve2.txt

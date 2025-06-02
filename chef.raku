@@ -12,6 +12,7 @@ use Qt::QtWidgets::QGraphicsScene;
 use Qt::QtWidgets::QGraphicsSimpleTextItem;
 use Qt::QtWidgets::QGraphicsView;
 use Qt::QtWidgets::QHBoxLayout;
+use Qt::QtWidgets::QVBoxLayout;
 use Qt::QtWidgets::QPen;
 use Qt::QtWidgets::QPushButton;
 use Qt::QtWidgets::QRectF;
@@ -63,13 +64,14 @@ constant ND = 7;    # Nombre de disques pour simuler le déplacement de la bague
 
 class Action
 {
-    has Str $.type;
-    has Str $.geste;
-    has Str $.affichage;
-    has Int $.duree;
-    has Str $.message;
-    has Duration $.startTime;  # Time related to tne end of the last Pause
-    has Duration $.endTime;    # Time related to the end of the last Pause
+    has Str $.type;             # 'I', 'B', 'M', etc...
+    has Str $.geste;            # Trajectory number
+    has Str $.affichage;        # Beat number
+    has Int $.duree;            # BPM speed of the beat
+    has Str $.message;          # Any text coming with the 'M' action
+    has Duration $.startTime;   # Time related to tne end of the last Pause
+    has Duration $.endTime;     # Time related to the end of the last Pause
+    has Int $.bar;              # Measure number
 
     method say
     {
@@ -362,6 +364,7 @@ class Sequencer is QtObject
     has Real $!Ts = $!Tb / N;       # Durée d'un échantillon de déplacement
     has Real $!t0;
     has Bool $!running = False;
+    has Bool $!stopped = False;
 
     has Int $!count;
     has Int $ai;           # Actions index
@@ -418,15 +421,18 @@ class Sequencer is QtObject
                 if $t > $!actions[$!ai].endTime {
                     $!ai++;
                     $!newBeat = True;
+                    if $!stopped {
+                        $!running = False;
+                    }
                     # say "NEWBEAT";
                     return;  # Solution de facilité, mais on perd un tic du timer
                 }
 
-                # say "AI = $!ai";
+                say "AI = $!ai";
                 $!b = $!actions[$!ai].geste.Int;
-                # say "b = ", $!b;
+                say "b = ", $!b;
                 $!i = (($t -  $!actions[$!ai].startTime) / $!Ts).Int;
-                # say "i = ", $!i;
+                say "i = ", $!i;
 
                 $!count++;
                 @.baguette[$!count % @!baguette.elems].move:
@@ -441,13 +447,16 @@ class Sequencer is QtObject
             }
             when 'P' {
                 # say "Action P",
-                $!ai++;           }
+                $!ai++;
+            }
             when 'S' {
                 # say "Action S",
-                $!ai++;           }
+                $!ai++;
+            }
             when 'I' {
                 # say "Action I",
-                $!ai++;           }
+                $!ai++;
+            }
             default {
                 die "Unknown action type {$!actions[$ai].type} !!!";
             }
@@ -455,7 +464,7 @@ class Sequencer is QtObject
 
     }
 
-    method init()
+    method init() is QtSlot
     {
         $!ai = 0;
         $!aimax = $!actions.elems;
@@ -465,15 +474,30 @@ class Sequencer is QtObject
             $bag.move: @.beat[$!b].x[$!i], @.beat[$!b].y[$!i];
         }
         $!count = 0;
+        $!newBeat = True;
+        $!stopped = False;
     }
 
     method start() is QtSlot
     {
-        # say "started";
-        $!ai = 0;
-        $!newBeat = True;
+        return if $!running;
+
+        say "Started at ai = $!ai";
         $!running = True;
-        $!t0 = now;
+        $!newBeat = True;
+        if $!stopped {
+            $!stopped = False;
+        } else {
+            $!t0 = DateTime.now.Instant;
+        }
+    }
+
+
+    method stop() is QtSlot
+    {
+        # say "stopped";
+        $!stopped = True;
+        say "Stopped at ai = $!ai";
     }
 
 }
@@ -481,8 +505,12 @@ class Sequencer is QtObject
 
 ####################################################################
 
+
+die "Syntaxe :   raku chef.rafu <file name>" if (@*ARGS.elems < 1);
+my Str $fileName = @*ARGS.shift;
+
 my $program = Program.new;
-$program.input: "data.txt";
+$program.input: $fileName;
 
 # Create QApplication before creating any other Qt object
 my $qApp = QApplication.new("Moving objects example", @*ARGS);
@@ -508,12 +536,19 @@ $view.setMinimumSize: W + 30, H + 30;   # Used scene always visible
 my $window = QWidget.new;    # main window
 
 my $startButton = QPushButton.new('Start');
+my $stopButton = QPushButton.new('Stop');
+my $resetButton = QPushButton.new('Reset');
 
 # Layout
 
+my $buttons = QVBoxLayout.new;
+$buttons.addWidget($startButton);
+$buttons.addWidget($stopButton);
+$buttons.addWidget($resetButton);
+
 my $layout = QHBoxLayout.new;
 $layout.addWidget($view);
-$layout.addWidget($startButton);
+$layout.addLayout($buttons);
 
 $window.setLayout($layout);
 $window.show;
@@ -540,6 +575,8 @@ my $timer = QTimer.new;
 $timer.setInterval: T;
 connect $timer, "timeout", $sequencer, "work";
 connect $startButton, "pressed", $sequencer, "start";
+connect $stopButton, "pressed", $sequencer, "stop";
+connect $resetButton, "pressed", $sequencer, "init";
 
 # Start the timer
 $timer.start;

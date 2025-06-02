@@ -22,7 +22,7 @@ Utilisation :
         - Lit le fichier test.metro
         - Ecrit le fichier data.txt
 
-    raku chef.raku
+    raku chef.raku data.txt
 
         - Lit le fichier data.txt
         - Affiche la battue

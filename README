@@ -15,9 +15,11 @@ test.metro : Exemple, pour test, d'un fichier "haut-niveau"
 
 metro_compiler.raku : Compilation d'un fichier bas-niveau --> haut-niveau
 
-Utilisation :
 
-    raku metro_compiler.raku
+Utilisation :
+=============
+
+    raku metro_compiler.raku test.metro data.txt
 
         - Lit le fichier test.metro
         - Ecrit le fichier data.txt
@@ -27,6 +29,16 @@ Utilisation :
         - Lit le fichier data.txt
         - Affiche la battue
 
+
+Script chef :
+=============
+
+"chef" est un script bash qui enchaîne metro_compiler.raku et chef.raku :
+
+    ./chef test.metro
+
+        - Compile test.metro dans un fichier temporaire (/tmp/test.metro.txt)
+        - Lance l'exécution de chef.raku avec /tmp/test.metroi.txt comme entrée
 
 
 

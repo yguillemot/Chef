@@ -1,0 +1,5 @@
+#!/usr/bin/bash
+
+cfile=/tmp/`basename $1`.txt
+raku metro_compiler.raku $1 $cfile
+raku chef.raku $cfile

@@ -1,0 +1,25 @@
+Etude d'une application de métronome visuel imitant (vaguement) un chef
+d'orchestre qui bat la mesure.
+
+Recherche d'une trajectoire appropriée pour la main du chef.
+
+
+Essai préliminaire avec GnuPlot
+-------------------------------
+trace.gp
+
+Calcul de la même trajectoire
+-----------------------------
+create_curve.raku
+
+Le résultat
+-----------
+curve.txt
+
+Calcul d'une trajectoire plus simple
+------------------------------------
+create_curve2.raku
+
+Le nouveau résultat
+-------------------
+curve2.txt

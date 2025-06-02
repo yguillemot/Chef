@@ -36,10 +36,28 @@ constant Vmax = 0.20;
 constant $tempo = 120;
 
 # Timer period (ms)
-constant T = 10;
+constant T = 50;
 
 # Number of points in a trajectory
-constant N = (10 * 60 / ($tempo / T)).Int;
+constant N = 500;
+# constant N = (10 * 60 / ($tempo / T)).Int;
+
+
+
+
+
+
+# $idx = indice du point dans la table des positions
+# $b = numero du temps
+# $it = compteur des tops du chronomètre (pêriode T)
+# $nbm = nombre dec battements par mesure (ex. : 3 si mesure à 3/4)
+
+# $idx = ((N * $it * T / $tempo) / N).Int % N;
+# $b = (($nbm * $it * T / $tempo) / $nbm).Int % $nbm;
+
+
+
+
 
 
 
@@ -102,16 +120,8 @@ class Baguette is QtObject
 
     method move($x, $y) is QtSlot        # Move current object after a timer period
     {
-        # Compute and set new position
+        # Set new position
         $!gitem.setPos: $x, $y;
-
-        # Show the current coordinates of the object
-#         $.coords.setText: "(" ~ $x.Int ~ ", " ~ $y.Int ~ ")";
-
-        # If borders of the scene have been reached, simulate a bounce
-        # by modifying the speed vector
-#         $!vx = -$.vx unless $.scene.x1 < $x < $.scene.x2 - $.w;
-#         $!vy = -$.vy unless $.scene.y1 < $y < $.scene.y2 - $.h;
     }
 }
 
@@ -224,6 +234,11 @@ class Sequencer is QtObject
 
     has $!now;
 
+    has Real $!Tb = 60 / $tempo;    # Durée d'un temps
+    has Real $!Ts = $!Tb / N;       # Durée d'un échantillon de déplacement
+    has Real $!t0;
+    has Bool $!running = False;
+
 
     submethod TWEAK
     {
@@ -245,18 +260,24 @@ class Sequencer is QtObject
     }
 
     method work is QtSlot {
+
+        return if !$!running;
+        my $t = DateTime.now.Instant - $!t0;
+        $!b = ($t / $!Tb).Int % 4;
+        $!i = ($t / $!Ts).Int % N;
+
         $.baguette.move: @.beat[$!b].x[$!i], @.beat[$!b].y[$!i];
-        $!i++;
-        if $!i >= N {
-            $!i = 0;
-            $!b++;
-            if $!b > 3 {
-                $!b = 0;
-                my $n = DateTime.now.Instant;
-                say $n - $!now;
-                $!now = $n;
-            }
-        }
+#         $!i++;
+#         if $!i >= N {
+#             $!i = 0;
+#             $!b++;
+#             if $!b > 3 {
+#                 $!b = 0;
+#                 my $n = DateTime.now.Instant;
+#                 say $n - $!now;
+#                 $!now = $n;
+#             }
+#         }
         $.scene.montrer: "{(4,1,2,3)[$!b]}";
     }
 
@@ -265,6 +286,12 @@ class Sequencer is QtObject
         $!b = 0;
         $!i = 0;
         $.baguette.move: @.beat[$!b].x[$!i], @.beat[$!b].y[$!i];
+    }
+
+    method start()
+    {
+        $!t0 = DateTime.now.Instant;
+        $!running = True;
     }
 
 }
@@ -313,6 +340,9 @@ connect $timer, "timeout", $sequencer, "work";
 
 # Start the timer
 $timer.start;
+
+# Start the sequencer
+$sequencer.start;
 
 # Run the graphical application
 $qApp.exec;
